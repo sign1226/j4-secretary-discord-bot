@@ -199,6 +199,11 @@ class J4Bot(commands.Bot):
     async def on_ready(self) -> None:
         logger.info(f"Bot 起動: {self.user} (ID: {self.user.id})")
 
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+        if isinstance(error, commands.CommandNotFound):
+            return  # 未知のコマンドは無視
+        logger.error("コマンドエラー: %s", error)
+
     async def on_message(self, message: discord.Message) -> None:
         # Bot 自身は無視
         if message.author.bot:
