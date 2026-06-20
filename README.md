@@ -1,4 +1,4 @@
-# J4-Secretary
+# J4-Secretary Discord Bot
 
 Discord で買い物リスト・予定・メモを管理する Bot です。
 
