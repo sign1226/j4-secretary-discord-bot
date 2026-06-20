@@ -1,0 +1,20 @@
+services:
+  j4-secretary:
+    image: python:3.11-slim
+    container_name: j4-secretary
+    volumes:
+      - ./app:/app
+      - ./data:/app/data
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+          - TZ=Asia/Tokyo
+    command: >
+      sh -c "pip install discord.py && python main.py"
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
