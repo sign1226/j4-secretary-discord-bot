@@ -418,6 +418,7 @@ class ControlView(discord.ui.View):
         ct = discord.ui.TextInput(label="内容", style=discord.TextStyle.paragraph)
         modal.add_item(ct)
         async def _sub(it):
+            await it.response.defer()
             data = await load_data(i.channel.id)
             data["notes"].append({"content": ct.value})
             await save_data(it.channel.id, data)
@@ -512,7 +513,7 @@ class ControlView(discord.ui.View):
         await auto_backup(i.channel.id)
         await i.response.defer()
         await update_panel(i.channel)
-        await flash_msg(i.channel, "✨ 全て完了しました")
+        await i.followup.send("✨ 全て完了しました", ephemeral=True)
 
     @discord.ui.button(label="設定", emoji="⚙️", style=discord.ButtonStyle.secondary, row=1, custom_id="panel:settings")
     async def settings(self, i, b):
