@@ -148,18 +148,39 @@ async def flash_msg(channel: discord.TextChannel, text: str, seconds: int = 3, d
     except discord.HTTPException as e:
         logger.warning(f"flash_msg 失敗: {e}")
 
-async def update_panel(channel: discord.TextChannel) -> None:
-    data = await load_data(channel.id)
+async def _edit_panel(channel: discord.TextChannel, data: dict) -> None:
+    """既存パネルを削除して新規送信する（Modal 送信時用）"""
+    embed = create_panel_embed(data)
     view = ControlView(channel.id)
+    # 古いパネルを削除
     if data.get("last_panel_id"):
         try:
-            msg = await channel.fetch_message(data["last_panel_id"])
-            await msg.delete()
+            old_msg = await channel.fetch_message(data["last_panel_id"])
+            await old_msg.delete()
         except (discord.NotFound, discord.HTTPException):
             pass
-    new_msg = await channel.send(embed=create_panel_embed(data), view=view)
+    # 新規送信
+    new_msg = await channel.send(embed=embed, view=view)
     data["last_panel_id"] = new_msg.id
-    # save_data は update_panel の呼び出し元で行う（二重保存防止）
+    await save_data(channel.id, data)
+
+
+async def update_panel(channel: discord.TextChannel) -> None:
+    """既存パネルを削除して新規送信する（データ更新時用）"""
+    data = await load_data(channel.id)
+    embed = create_panel_embed(data)
+    view = ControlView(channel.id)
+    # 古いパネルを削除
+    if data.get("last_panel_id"):
+        try:
+            old_msg = await channel.fetch_message(data["last_panel_id"])
+            await old_msg.delete()
+        except (discord.NotFound, discord.HTTPException):
+            pass
+    # 新規送信
+    new_msg = await channel.send(embed=embed, view=view)
+    data["last_panel_id"] = new_msg.id
+    await save_data(channel.id, data)
 
 def parse_datetime_flexible(dt_str: str) -> str:
     """柔軟な日時パース: YYYY/MM/DD HH:MM, YYYY-MM-DD HH:MM, YYYY/MM/DD 等をサポート"""
@@ -337,8 +358,7 @@ class ControlView(discord.ui.View):
             data["history"][item_in.value] = place
             await save_data(it.channel.id, data)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, data)
             await flash_msg(it.channel, f"✅ **{item_in.value}** を登録しました")
         modal.on_submit = _sub
         await interaction.response.send_modal(modal)
@@ -358,8 +378,7 @@ class ControlView(discord.ui.View):
             data["history"][item] = p
             await save_data(it.channel.id, data)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, data)
             await flash_msg(it.channel, f"✅ **{item}** を **{p}** に新しく登録しました")
         modal.on_submit = _sub
         await interaction.response.send_modal(modal)
@@ -388,8 +407,7 @@ class ControlView(discord.ui.View):
             })
             await save_data(it.channel.id, data)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, data)
             await flash_msg(it.channel, f"📅 予定 **{ct.value}** をセットしました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -404,8 +422,7 @@ class ControlView(discord.ui.View):
             data["notes"].append({"content": ct.value})
             await save_data(it.channel.id, data)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, data)
             await flash_msg(it.channel, "📝 メモを保存しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -433,8 +450,7 @@ class ControlView(discord.ui.View):
             d["history"][i_in.value] = p_in.value
             await save_data(it.channel.id, d)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, d)
             await flash_msg(it.channel, f"✏️ **{i_in.value}** に更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -459,8 +475,7 @@ class ControlView(discord.ui.View):
             })
             await save_data(it.channel.id, d)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, d)
             await flash_msg(it.channel, "✏️ 予定を更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -476,8 +491,7 @@ class ControlView(discord.ui.View):
             d["notes"][idx] = {"content": ct_in.value}
             await save_data(it.channel.id, d)
             await auto_backup(it.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, d)
             await flash_msg(it.channel, "✏️ メモを更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -800,8 +814,7 @@ class EditItemsView(discord.ui.View):
             d["history"][i_in.value] = p_in.value
             await save_data(i.channel.id, d)
             await auto_backup(i.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(i.channel, d)
             await flash_msg(it.channel, f"✏️ **{i_in.value}** に更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -825,8 +838,7 @@ class EditItemsView(discord.ui.View):
             })
             await save_data(i.channel.id, d)
             await auto_backup(i.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, d)
             await flash_msg(it.channel, "✏️ 予定を更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -841,8 +853,7 @@ class EditItemsView(discord.ui.View):
             d["notes"][idx] = {"content": ct_in.value}
             await save_data(i.channel.id, d)
             await auto_backup(i.channel.id)
-            await it.response.defer()
-            await update_panel(it.channel)
+            await _edit_panel(it.channel, d)
             await flash_msg(it.channel, "✏️ メモを更新しました")
         modal.on_submit = _sub
         await i.response.send_modal(modal)
@@ -1044,7 +1055,6 @@ class DeleteByPlaceSelect(discord.ui.Select):
         data["shopping"] = [item for item in data["shopping"] if item["place"] != self.values[0]]
         await save_data(self.channel_id, data)
         await auto_backup(self.channel_id)
-        await i.response.defer()
         await update_panel(i.channel)
         await flash_msg(i.channel, f"📍 {self.values[0]} のリストを整理しました")
 
@@ -1063,7 +1073,6 @@ class DeleteSelect(discord.ui.Select):
         data[key].pop(int(self.values[0][2:]))
         await save_data(self.channel_id, data)
         await auto_backup(self.channel_id)
-        await i.response.defer()
         await update_panel(i.channel)
         await flash_msg(i.channel, "🗑️ 削除しました")
 
@@ -1079,7 +1088,6 @@ class SnoozeStopView(discord.ui.View):
         data["schedule"] = [it for it in data["schedule"] if it.get("id") != self.sid]
         await save_data(i.channel.id, data)
         await auto_backup(i.channel.id)
-        await i.response.defer()
         await update_panel(i.channel)
         await flash_msg(i.channel, "✅ 完了しました")
 
@@ -1110,7 +1118,7 @@ async def stop(ctx):
     data["last_panel_id"] = None
     data["active"] = False
     await save_data(ctx.channel.id, data)
-    await ctx.send("✅ Secretary機能を停止しました。")
+    await ctx.send("✅ Secretary機能を停止しました。", delete_after=10)
 
 @bot.command()
 async def help(ctx):
@@ -1141,7 +1149,7 @@ async def help(ctx):
         ),
         inline=False
     )
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, delete_after=30)
 
 @bot.command()
 async def search(ctx, *, keyword: str):
@@ -1150,10 +1158,10 @@ async def search(ctx, *, keyword: str):
     history = data.get("history", {})
     results = {k: v for k, v in history.items() if keyword in k}
     if not results:
-        return await ctx.send(f"🔍 `{keyword}` に一致する履歴はありません。")
+        return await ctx.send(f"🔍 `{keyword}` に一致する履歴はありません。", delete_after=15)
     lines = [f"・{k} → {v}" for k, v in list(results.items())[:20]]
     embed = discord.Embed(title=f"🔍 検索結果: {keyword}", description="\n".join(lines), color=0x2b2d31)
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, delete_after=30)
 
 @bot.command()
 async def list(ctx):
@@ -1161,9 +1169,9 @@ async def list(ctx):
     data = await load_data(ctx.channel.id)
     places = data.get("places", [])
     if not places:
-        return await ctx.send("📍 登録されている場所はありません。")
+        return await ctx.send("📍 登録されている場所はありません。", delete_after=15)
     lines = [f"{i+1}. {p}" for i, p in enumerate(places)]
     embed = discord.Embed(title="📍 登録済み場所", description="\n".join(lines), color=0x2b2d31)
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, delete_after=30)
 
 bot.run(TOKEN)
