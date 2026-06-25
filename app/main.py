@@ -815,6 +815,7 @@ class EditItemsView(discord.ui.View):
         modal.add_item(p_in)
         modal.add_item(i_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(i.channel.id)
             d["shopping"][idx] = {"place": p_in.value, "item": i_in.value}
             d["history"][i_in.value] = p_in.value
@@ -835,6 +836,7 @@ class EditItemsView(discord.ui.View):
         modal.add_item(snz_in)
         modal.add_item(ct_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(i.channel.id)
             d["schedule"][idx].update({
                 "display_dt": dt_in.value[5:],
@@ -855,6 +857,7 @@ class EditItemsView(discord.ui.View):
         ct_in = discord.ui.TextInput(label="内容", style=discord.TextStyle.paragraph, default=item_data["content"])
         modal.add_item(ct_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(i.channel.id)
             d["notes"][idx] = {"content": ct_in.value}
             await save_data(i.channel.id, d)
