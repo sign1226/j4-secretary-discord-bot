@@ -353,6 +353,7 @@ class ControlView(discord.ui.View):
         item_in = discord.ui.TextInput(label="品名")
         modal.add_item(item_in)
         async def _sub(it):
+            await it.response.defer()
             data = await load_data(it.channel.id)
             data["shopping"].append({"place": place, "item": item_in.value})
             data["history"][item_in.value] = place
@@ -370,6 +371,7 @@ class ControlView(discord.ui.View):
         modal.add_item(p_in)
         modal.add_item(i_in)
         async def _sub(it):
+            await it.response.defer()
             data = await load_data(it.channel.id)
             p, item = p_in.value, i_in.value
             if p not in data["places"]:
@@ -446,6 +448,7 @@ class ControlView(discord.ui.View):
         modal.add_item(p_in)
         modal.add_item(i_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(it.channel.id)
             d["shopping"][idx] = {"place": p_in.value, "item": i_in.value}
             d["history"][i_in.value] = p_in.value
@@ -467,6 +470,7 @@ class ControlView(discord.ui.View):
         modal.add_item(snz_in)
         modal.add_item(ct_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(it.channel.id)
             d["schedule"][idx].update({
                 "display_dt": dt_in.value[5:],
@@ -488,6 +492,7 @@ class ControlView(discord.ui.View):
         ct_in = discord.ui.TextInput(label="内容", style=discord.TextStyle.paragraph, default=item["content"])
         modal.add_item(ct_in)
         async def _sub(it):
+            await it.response.defer()
             d = await load_data(it.channel.id)
             d["notes"][idx] = {"content": ct_in.value}
             await save_data(it.channel.id, d)
